@@ -1,15 +1,11 @@
-FROM python:3.7.4
-ENV PYTHONUNBUFFERED 1
+FROM informaticsmatters/rdkit-python3-debian:Release_2019_03_1
+USER 0
 RUN mkdir /code
 WORKDIR /code
 COPY requirements.txt /code/
 RUN apt-get update && apt-get install -y \
-  sudo \
-  cmake \
-  time \
   graphviz \
-  xdg-utils \
-  python3-setuptools &&\
+  xdg-utils &&\
   apt-get clean && \ 
   rm -rf /var/lib/apt/lists/* &&\
   pip --no-cache-dir install --upgrade pip && \

@@ -12,3 +12,6 @@ tensorflow==1.14.0
 tqdm
 optuna
 jupyter
+mordred
+pubchempy
+pillow
