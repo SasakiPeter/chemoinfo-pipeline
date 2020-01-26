@@ -1,5 +1,116 @@
+import pandas as pd
 from pipeline.conf import settings
 from pipeline.train.base import CrossValidator
+
+
+from pipeline.preprocess import (
+    label_encoding, nan_to_zero, remove_const,
+    select_satisfy_lipinski, select_not_satisfy_lipinski,
+    create_basicity, remove_nan, select_core_feature,
+    decompose_binary, standardize
+)
+
+from sklearn.model_selection import StratifiedKFold, KFold
+from sklearn.metrics import (
+    roc_auc_score, log_loss,
+    r2_score
+)
+from pipeline.utils.metrics import rmse
+
+from sklearn.linear_model import (
+    LinearRegression, LogisticRegression, Ridge, Lasso)
+from sklearn.svm import SVC, SVR
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from catboost import CatBoostClassifier, CatBoostRegressor
+from lightgbm import LGBMClassifier, LGBMRegressor
+from pickle.train.model import NN
+
+
+def get_preprocess(name):
+    preprocesses = {
+        'LabelEncoding': label_encoding,
+        'NanToZero': nan_to_zero,
+        'RemoveConst': remove_const,
+        'SelectSatisfyLipinski': select_satisfy_lipinski,
+        'SelectNotSatisfyLipinski': select_not_satisfy_lipinski,
+        'CreateBasicity': create_basicity,
+        'RemoveNan': remove_nan,
+        'SelectCoreFeature': select_core_feature,
+        'DecomposeBinary': decompose_binary,
+        'Standardize': standardize,
+    }
+    return preprocesses[name]
+
+
+def get_transformer(name):
+    transformer = {
+        # 'DecomposeBinary': decompose_binary,
+        # 'Standardize': standardize,
+    }
+    return transformer[name]
+
+
+def get_split(algo, n_splits, seed, stratified=None):
+    regression = {
+        'CatBoostRegressor',
+        'LGBMRegressor',
+        'RandomForestRegressor',
+        'LinearRegression',
+        'Ridge', 'Lasso',
+        'SVR', 'NN'
+    }
+    classification = {
+        'CatBoostClassifier',
+        'LGBMClassifier',
+        'RandomForestClassifier',
+        'LogisticRegression',
+        'SVC',
+    }
+    if algo in regression:
+        if stratified:
+            return StratifiedKFold(
+                n_splits=n_splits, shuffle=True, random_state=seed
+            )
+        else:
+            return KFold(
+                n_splits=n_splits, shuffle=True, random_state=seed
+            )
+    elif algo in classification:
+        return StratifiedKFold(
+            n_splits=n_splits, shuffle=True, random_state=seed
+        )
+    else:
+        raise NotImplementedError(
+            f'Trainer class must provide a {algo} model')
+
+
+def get_eval_metric(name):
+    eval_metrics = {
+        'RMSE': rmse,
+        'R2': r2_score,
+        'logloss': log_loss,
+        'AUC': roc_auc_score
+    }
+    return eval_metrics[name]
+
+
+def get_model(name, params):
+    models = {
+        'CatBoostRegressor': CatBoostRegressor,
+        'CatBoostClassifier': CatBoostClassifier,
+        'LGBMRegressor': LGBMRegressor,
+        'LGBMClassifier': LGBMClassifier,
+        'RandomForestRegressor': RandomForestRegressor,
+        'RandomForestClassifier': RandomForestClassifier,
+        'LinearRegression': LinearRegression,
+        'LogisticRegression': LogisticRegression,
+        'Ridge': Ridge,
+        'Lasso': Lasso,
+        'SVR': SVR,
+        'SVC': SVC,
+        'NN': NN,
+    }
+    return models[name](**params)
 
 
 def get_cvs_by_layer(layer):
@@ -11,3 +122,13 @@ def get_cvs_by_layer(layer):
         cv.load(model_path)
         cvs[section_id] = cv
     return cvs
+
+
+def get_oof_by_layer(layer):
+    X = pd.DataFrame()
+    X_test = pd.DataFrame()
+    cvs = get_cvs_by_layer(layer)
+    for section_id, cv in cvs.items():
+        X[section_id] = cv.oof
+        X_test[section_id] = cv.pred
+    return X, X_test

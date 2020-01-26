@@ -117,10 +117,12 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+catboost_info
+config/settings/*
 data/*
 notebooks/*
 submits/*
-catboost_info
 models/*
 
+!config/settings/sample.py
 !.gitkeep

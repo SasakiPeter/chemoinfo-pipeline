@@ -21,7 +21,7 @@ class Trainer:
         'RandomForestRegressor', 'RandomForestClassifier',
         'LinearRegression', 'LogisticRegression',
         'Ridge', 'Lasso',
-        'SVR', 'SVC',
+        'SVR', 'SVC', 'NN'
     }
 
     def __init__(self, model):
@@ -47,8 +47,15 @@ class Trainer:
                            #    categorical_feature=cat_features,
                            **fit_params)
             self.best_iteration = self.model.best_iteration_
+
+        elif self.model_type == 'NN':
+            self.model.fit(
+                X, y,
+                eval_set=(X_valid, y_valid),
+                fit_params=fit_params,
+            )
+            self.best_iteration = self.model.best_iteration_
         else:
-            # カテゴリ変数あるやつを、LinearRegressionにかけたら、バグりそう
             self.model.fit(X, y, **fit_params)
             self.best_iteration = -1
 
@@ -126,7 +133,9 @@ class CrossValidator:
     def run(self, X, y, X_test=None, id_test=None,
             group=None, n_splits=None,
             eval_metrics=None, prediction='predict',
-            transform=None, train_params={}, verbose=True):
+            transforms=None, train_params={},
+            stratified=None,
+            verbose=True):
 
         assert isinstance(X, pd.core.frame.DataFrame)
 
@@ -141,10 +150,15 @@ class CrossValidator:
         self.imps = np.zeros((X.shape[1], K))
         self.scores = pd.DataFrame()
 
+        if stratified:
+            stratified_y = X.loc[:, stratified]
+        else:
+            stratified_y = y
+
         self.id_test = id_test
 
         for fold_i, (train_idx, valid_idx) in enumerate(
-                self.datasplit.split(X, y, group)):
+                self.datasplit.split(X, stratified_y, group)):
 
             x_train, x_valid = X.iloc[train_idx, :], X.iloc[valid_idx, :]
             y_train, y_valid = y[train_idx], y[valid_idx]
@@ -152,11 +166,10 @@ class CrossValidator:
             if X_test is not None:
                 x_test = X_test.copy()
 
-            # foldごとに特徴量を作り直す、すなわち、target encoding用
-            if transform is not None:
-                x_train, x_valid, y_train, y_valid, x_test = transform(
-                    Xs=(x_train, x_valid), ys=(y_train, y_valid),
-                    X_test=x_test)
+            if transforms is not None:
+                for transform in transforms:
+                    x_train, x_valid, y_train, y_valid, x_test = transform(
+                        x_train, x_valid, y_train, y_valid, x_test)
 
             if verbose > 0:
                 print(f'\n-----\n {K} fold cross validation. \
@@ -166,7 +179,8 @@ class CrossValidator:
                 train_params['fit_params']['verbose'] = 0
             model = Trainer(copy(self.basemodel))
             model.train(x_train, y_train, x_valid, y_valid, **train_params)
-            self.models.append(model.get_model())
+            if model.model_type != 'NN':
+                self.models.append(model.get_model())
 
             if verbose > 0:
                 print(f'best iteration is {model.get_best_iteration()}')
@@ -235,6 +249,13 @@ class CrossValidator:
         plt.xlabel('This error bar is SD')
         # plt.ylabel('')
         plt.savefig(path)
+
+    def save_feature_importances_as_csv(self, columns, path):
+        df = pd.DataFrame()
+        df['name'] = columns
+        df['imp'] = np.mean(self.imps, axis=1)
+        df = df.sort_values(by='imp')[::-1]
+        df.to_csv(path, encoding='utf-8', index=False)
 
     def save(self, path):
         objects = [

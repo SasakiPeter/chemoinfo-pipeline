@@ -8,6 +8,6 @@ RUN apt-get update && apt-get install -y \
   xdg-utils &&\
   apt-get clean && \ 
   rm -rf /var/lib/apt/lists/* &&\
-  pip --no-cache-dir install --upgrade pip && \
+  # pip --no-cache-dir install --upgrade pip && \
   pip --no-cache-dir install -r requirements.txt
 COPY . /code/

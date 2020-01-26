@@ -1,4 +1,4 @@
-PROJECT_ID = '5'
+PROJECT_ID = 'sample'
 
 
 # Data source definition
@@ -10,29 +10,68 @@ DATA_PATH = {
 # semi target っていうかtarget複数設定して、それぞれの
 # 学習器に応じて、切り替えられるように実装したい
 DATA_FORMAT = {
-    'id': 'ID',
-    'target': 'y',
-    # 'not_X':
+    'id': 'rowID',
+    'target': 'Objective Variable_CL(L/hr/kg)_Log',
+    'not_X': ['Objective Variable_CL(L/hr/kg)'],
 }
 
-CAT_IDXS = [0, 1, 2, 3, 4, 5, 6, 7]
+CAT_IDXS = []
 
 
 # Training
 
-TRAIN_CV = {
-    'n_splits': 5,
-    'seed': 1
-}
 
 N_LAYERS = 2
 
 FIRST_LAYER = {
+    # 'NN_NN-1': {
+    #     'PREPROCESS': [
+    #         'CreateBasicity',
+    #         'NanToZero',
+    #         'RemoveConst',
+    #         'Standardize',
+    #     ],
+    #     # 'TRANSFORM': [
+    #     #     'Standardize',
+    #     # ],
+    #     'CV': {
+    #         'n_splits': 5,
+    #         'seed': 1,
+    #         # 'stratified': 'Lipinski'
+    #     },
+    #     'PARAMS': {
+    #         'num_layer': 4,
+    #         'mid_units': 485,
+    #         'activation': 'relu',
+    #         'learning_rate': 0.001,
+    #         'seed': 2
+    #     },
+    #     'FIT_PARAMS': {
+    #         'verbose': 0,
+    #         'epochs': 1000,
+    #         'batch_size': 100,
+    #         # 'callbacks': ['early_stopping'],
+    #         'patience': 50,
+    #         'restore_best_weights': True
+    #     },
+    #     # 'EARLY_STOPPING': {
+    #     # },
+    #     'EVAL_METRICS': [
+    #         'RMSE',
+    #         'R2'
+    #     ],
+    #     'PREDICT_FORMAT': 'predict'
+    # },
     'LGBMRegressor_LGB1': {
-        'PREPROCESS': ['LabelEncoding'],
+        'PREPROCESS': [
+            # 'DecomposeBinary',
+            'CreateBasicity',
+            'RemoveConst'
+        ],
         'CV': {
             'n_splits': 5,
-            'seed': 1
+            'seed': 1,
+            'stratified': 'Lipinski',
         },
         'PARAMS': {
             'objective': 'regression',
@@ -41,31 +80,32 @@ FIRST_LAYER = {
             'nthread': -1,
             'seed': 0,
 
-            'num_leaves': 31,
+            'num_leaves': 63,
             'min_data_in_leaf': 20,
-            'max_depth': 10,
+            'max_depth': 7,
 
             'bagging_fraction': 0.7,
             'bagging_freq': 1,
             'bagging_seed': 0,
+            # 'feature_fraction': 1
 
             'save_binary': True,
 
             'max_bin': 255,
-            'learning_rate': 0.03,
+            'learning_rate': 0.1,
 
-            'min_sum_hessian_in_leaf': 0.01,
+            'min_sum_hessian_in_leaf': 0.1,
             'lambda_l1': 0,
             'lambda_l2': 0,
-            'min_gain_to_split': 0.01,
+            'min_gain_to_split': 0.0,
 
             'verbose': -1,
             'metric': 'rmse',
             'histogram_pool_size': 1024,
-            'n_estimators': 1000,
+            'n_estimators': 10000,
         },
         'FIT_PARAMS': {
-            'early_stopping_rounds': 300,
+            'early_stopping_rounds': 100,
         },
         'EVAL_METRICS': [
             'RMSE',
@@ -74,40 +114,45 @@ FIRST_LAYER = {
         'PREDICT_FORMAT': 'predict'
     },
     'CatBoostRegressor_CTB1': {
-        'PREPROCESS': [],
+        'PREPROCESS': [
+            # 'DecomposeBinary',
+            'CreateBasicity',
+            'RemoveConst'
+        ],
         'CV': {
             'n_splits': 5,
-            'seed': 1
+            'seed': 1,
+            'stratified': 'Lipinski',
         },
         'PARAMS': {
             'loss_function': 'RMSE',
             'eval_metric': 'R2',
             'random_seed': 608,
-            'learning_rate': 0.03,
+            'learning_rate': 0.1,
 
             'bootstrap_type': 'Bayesian',
             'sampling_frequency': 'PerTreeLevel',
             'sampling_unit': 'Object',
 
             # up to 16
-            'depth': 4,
+            'depth': 8,
             # try diff value
-            # 'l2_leaf_reg': 2,
+            'l2_leaf_reg': 3.0,
             # 'random_strength': 1,
-            # 'bagging_temperature': 0,
+            'bagging_temperature': 0,
             'border_count': 254,
 
             # golden feature
             # 'per_float_feature_quantization': '0:border_count=1024'
 
             'grow_policy': 'SymmetricTree',
-            'nan_mode': 'Forbidden',
+            'nan_mode': 'Min',
             # 陽性の重みを増やす
             # 'scale_pos_weight': 9,
-            'iterations': 1000,
+            'iterations': 10000,
         },
         'FIT_PARAMS': {
-            'early_stopping_rounds': 300,
+            'early_stopping_rounds': 100,
         },
         'EVAL_METRICS': [
             'RMSE',
@@ -115,70 +160,6 @@ FIRST_LAYER = {
         ],
         'PREDICT_FORMAT': 'predict'
     },
-    'CatBoostRegressor_CTB2': {
-        'PREPROCESS': [],
-        'CV': {
-            'n_splits': 5,
-            'seed': 1
-        },
-        'PARAMS': {
-            'loss_function': 'RMSE',
-            'eval_metric': 'R2',
-            'random_seed': 608,
-            'learning_rate': 0.03,
-
-            'bootstrap_type': 'Bayesian',
-            'sampling_frequency': 'PerTreeLevel',
-            'sampling_unit': 'Object',
-
-            # up to 16
-            'depth': 7,
-            # try diff value
-            # 'l2_leaf_reg': 2,
-            # 'random_strength': 1,
-            # 'bagging_temperature': 0,
-            'border_count': 254,
-
-            # golden feature
-            # 'per_float_feature_quantization': '0:border_count=1024'
-
-            'grow_policy': 'SymmetricTree',
-            'nan_mode': 'Forbidden',
-            # 陽性の重みを増やす
-            # 'scale_pos_weight': 9,
-            'iterations': 1000,
-        },
-        'FIT_PARAMS': {
-            'early_stopping_rounds': 300,
-        },
-        'EVAL_METRICS': [
-            'RMSE',
-            'R2'
-        ],
-        'PREDICT_FORMAT': 'predict'
-    },
-    'RandomForestRegressor_RF-1': {
-        'PREPROCESS': [],
-        'CV': {
-            'n_splits': 5,
-            'seed': 1
-        },
-        'PARAMS': {
-            'n_estimators': 500,
-            'criterion': 'mse',
-            'max_depth': 10,
-            'max_features': 'sqrt'
-        },
-        'FIT_PARAMS': {
-
-        },
-        'EVAL_METRICS': [
-            'RMSE',
-            'R2'
-        ],
-        'PREDICT_FORMAT': 'predict'
-    },
-    # 'LinearRegression',
 }
 
 SECOND_LAYER = {

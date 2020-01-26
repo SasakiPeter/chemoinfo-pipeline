@@ -3,9 +3,8 @@ import sys
 
 
 def main():
-    # 複数あってもいいようにする
-    # os.environ.setdefault("SETTINGS_MODULE", "config.settings.hoge")
-    os.environ.setdefault("SETTINGS_MODULE", "config.settings")
+    file_name = sys.argv.pop()
+    os.environ.setdefault("SETTINGS_MODULE", f"config.settings.{file_name}")
     try:
         from pipeline.core.management import execute_from_command_line
     except ImportError:

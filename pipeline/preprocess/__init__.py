@@ -1,44 +1,23 @@
-import pandas as pd
-from sklearn.preprocessing import LabelEncoder
-from pipeline.conf import settings
-
-
-def load_train():
-    path = settings.DATA_PATH['train']
-    df = pd.read_csv(path)
-    not_X = [settings.DATA_FORMAT['id'], settings.DATA_FORMAT['target']]
-    X = df.drop(not_X, axis=1)
-    y = df[settings.DATA_FORMAT['target']]
-    print(X.shape, y.shape)
-    return X, y
-
-
-def load_test():
-    path = settings.DATA_PATH['test']
-    df = pd.read_csv(path)
-    X = df.drop([settings.DATA_FORMAT['id']], axis=1)
-    ID = df[settings.DATA_FORMAT['id']]
-    print(X.shape)
-    return X, ID
-
-
-def get_object_columns(df):
-    return [key for key, value in df.dtypes.items() if value == 'object']
-
-
-def label_encoding(X_train, X_test):
-    df = pd.concat([X_train, X_test], axis=0)
-    columns = get_object_columns(df)
-    for col in columns:
-        le = LabelEncoder()
-        le.fit(df[col].values)
-        X_train[col] = le.transform(X_train[col].values)
-        X_test[col] = le.transform(X_test[col].values)
-    return X_train, X_test
+from pipeline.preprocess.decompose import decompose_binary
+from pipeline.preprocess.encode import label_encoding
+from pipeline.preprocess.generate import create_basicity
+from pipeline.preprocess.interpolate import nan_to_zero
+from pipeline.preprocess.load_data import load_train, load_test
+from pipeline.preprocess.reduce import remove_const, remove_nan
+from pipeline.preprocess.scale import standardize
+from pipeline.preprocess.select import (
+    select_satisfy_lipinski,
+    select_not_satisfy_lipinski,
+    select_core_feature
+)
 
 
 def preprocess():
     X_train, y_train = load_train()
     X_test, id_test = load_test()
-    X_train, X_test = label_encoding(X_train, X_test)
-    print('動作確認OK')
+    print('X_train shape: ', X_train.shape,
+          'y_train shape: ', y_train.shape)
+    print('X_test shape: ', X_test.shape,
+          'id_test shape: ', id_test.shape)
+
+    # ここにテストを書きたい
