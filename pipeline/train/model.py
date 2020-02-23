@@ -1,3 +1,7 @@
+import os
+import random
+import numpy as np
+
 from sklearn.base import BaseEstimator, RegressorMixin
 import tensorflow as tf
 import tensorflow.python.keras.backend as K
@@ -39,7 +43,11 @@ class NN(BaseEstimator, RegressorMixin):
         #     fit_params['callbacks'] =
         # [get_callback(name)for name in callbacks]
         K.clear_session()
-        tf.set_random_seed(self.seed)
+        # tf.set_random_seed(self.seed)
+        os.environ['PYTHONHASHSEED'] = '0'
+        np.random.seed(self.seed)
+        random.seed(self.seed)
+        tf.compat.v1.set_random_seed(self.seed)
         fit_params = fit_params.copy()
 
         fit_params['x'] = X

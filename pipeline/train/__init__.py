@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from pipeline.conf import settings
@@ -14,10 +15,17 @@ from pipeline.train.utils import (
 from pipeline.utils.directory import provide_dir
 
 
-def train_by_layer(layer, X, y, X_test, id_test, cv_summary, folder_path):
-    original = X, y, X_test, id_test
+def train_by_layer(layer, X, y, id_train,
+                   X_test, id_test, cv_summary, folder_path):
+    original = X.copy(), y.copy(), X_test.copy(), id_test.copy()
     for name, params in layer.items():
         X, y, X_test, id_test = original
+
+        if 'stratified' in params['CV'].keys():
+            stratified_y = X.loc[:, params['CV']['stratified']]
+            stratified = stratified_y >= np.median(stratified_y)
+        else:
+            stratified = None
 
         if params['PREPROCESS']:
             preprocess = params['PREPROCESS']
@@ -31,10 +39,6 @@ def train_by_layer(layer, X, y, X_test, id_test, cv_summary, folder_path):
 
         # n_splits = params['CV']['n_splits']
         # seed = params['CV']['seed']
-        if 'stratified' in params['CV'].keys():
-            stratified = params['CV']['stratified']
-        else:
-            stratified = None
 
         if 'transform' in params.keys():
             transforms = [get_transformer(param)
@@ -42,10 +46,13 @@ def train_by_layer(layer, X, y, X_test, id_test, cv_summary, folder_path):
         else:
             transforms = None
 
+        # params['CV']内に複数n_splitsがあればどうにかするやつ
+        # section_idにシード値をつける必要がある？
+
         kf = get_split(algo_name, **params['CV'])
         cv = CrossValidator(get_model(algo_name, params['PARAMS']), kf)
         cv.run(
-            X, y, X_test, id_test,
+            X, y, id_train, X_test, id_test,
             eval_metrics=eval_metrics,
             prediction=params['PREDICT_FORMAT'],
             train_params={
@@ -60,6 +67,8 @@ def train_by_layer(layer, X, y, X_test, id_test, cv_summary, folder_path):
         cv.save(models_path)
         cv_scores_path = f'{folder_path}/{section_id}.csv'
         cv.scores.to_csv(cv_scores_path, encoding='utf-8')
+        cv_oof_path = f'{folder_path}/{section_id}-oof.csv'
+        cv.save_oof(cv_oof_path)
 
         # feature importance
         image_path = f'{folder_path}/{section_id}.png'
@@ -87,19 +96,25 @@ def train():
     cv_summary = pd.DataFrame()
 
     # loading data
-    X, y = load_train()
+    X, y, id_train = load_train()
     X_test, id_test = load_test()
 
     # first layer
     first_layer = settings.FIRST_LAYER
     cv_summary = train_by_layer(
-        first_layer, X, y, X_test, id_test, cv_summary, folder_path)
+        first_layer, X, y, id_train, X_test, id_test, cv_summary, folder_path)
+
+    # ここでseed averaging？
+    # first layer内の選択したモデル群に対してアベレージングを行う
+    # それぞれのモデルのスコアの平均値をとって、cv_summaryに加える
+
+    #
 
     # second layer
     second_layer = settings.SECOND_LAYER
     X, X_test = get_oof_by_layer(first_layer)
     cv_summary = train_by_layer(
-        second_layer, X, y, X_test, id_test, cv_summary, folder_path)
+        second_layer, X, y, id_train, X_test, id_test, cv_summary, folder_path)
 
     path = f'{folder_path}/summary.csv'
     cv_summary.to_csv(path, encoding='utf-8')
@@ -114,15 +129,21 @@ def train():
     # with open(f'{folder_path}/blend.txt', 'w') as f:
     #     f.write(f'{blender.score}')
 
+    # visualize的なmodule作った方がよさよう
+
     import matplotlib.pyplot as plt
     import numpy as np
     columns = cv_summary.index.values
-    for metric in ['R2', 'RMSE']:
-        plt.figure(figsize=(5, -(-len(columns) // 3)))
-        mean = cv_summary.loc[:, f'{metric}_mean']
-        sd = cv_summary.loc[:, f'{metric}_sd']
+
+    for i in range(cv_summary.columns.values.shape[0]//4):
+        plt.figure(figsize=(12, 6))
+        mean = cv_summary.iloc[:, i*4]
+        se = cv_summary.iloc[:, i*4+2]
+        metric, _ = mean.name.split('_')
+
         order = np.argsort(mean)
         plt.barh(np.array(columns)[order],
-                 mean[order], xerr=sd[order])
-        plt.xlabel('This error bar is SD')
+                 mean[order], xerr=se[order])
+        plt.xlabel('This error bar is SE')
         plt.savefig(f'{folder_path}/summary-{metric}.png')
+        plt.close()

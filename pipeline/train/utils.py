@@ -6,8 +6,16 @@ from pipeline.train.base import CrossValidator
 from pipeline.preprocess import (
     label_encoding, nan_to_zero, remove_const,
     select_satisfy_lipinski, select_not_satisfy_lipinski,
-    create_basicity, remove_nan, select_core_feature,
-    decompose_binary, standardize
+    create_features, create_features2,
+    remove_nan, select_core_feature,
+    decompose_binary, standardize, rankgauss, join_mies,
+    select_imp_30_features,
+    select_imp_60_features,
+    select_imp_100_features,
+    select_imp_300_features,
+    select_imp_500_features,
+    select_imp_800_features,
+    select_imp_1000_features
 )
 
 from sklearn.model_selection import StratifiedKFold, KFold
@@ -23,7 +31,7 @@ from sklearn.svm import SVC, SVR
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from catboost import CatBoostClassifier, CatBoostRegressor
 from lightgbm import LGBMClassifier, LGBMRegressor
-from pickle.train.model import NN
+from pipeline.train.model import NN
 
 
 def get_preprocess(name):
@@ -33,11 +41,22 @@ def get_preprocess(name):
         'RemoveConst': remove_const,
         'SelectSatisfyLipinski': select_satisfy_lipinski,
         'SelectNotSatisfyLipinski': select_not_satisfy_lipinski,
-        'CreateBasicity': create_basicity,
+        # 'CreateBasicity': create_basicity,
+        'CreateFeatures': create_features,
+        'CreateFeatures2': create_features2,
+        'JoinMies': join_mies,
         'RemoveNan': remove_nan,
         'SelectCoreFeature': select_core_feature,
         'DecomposeBinary': decompose_binary,
         'Standardize': standardize,
+        'RankGauss': rankgauss,
+        'SelectImp30Features': select_imp_30_features,
+        'SelectImp60Features': select_imp_60_features,
+        'SelectImp100Features': select_imp_100_features,
+        'SelectImp300Features': select_imp_300_features,
+        'SelectImp500Features': select_imp_500_features,
+        'SelectImp800Features': select_imp_800_features,
+        'SelectImp1000Features': select_imp_1000_features,
     }
     return preprocesses[name]
 

@@ -17,3 +17,4 @@ tqdm
 optuna
 pillow
 networkx==2.3
+umap-learn

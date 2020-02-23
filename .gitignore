@@ -123,6 +123,7 @@ data/*
 notebooks/*
 submits/*
 models/*
+reports/*
 
 !config/settings/sample.py
 !.gitkeep

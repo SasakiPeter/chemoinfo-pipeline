@@ -1,3 +1,4 @@
+import os
 from copy import copy
 import pickle
 
@@ -124,13 +125,15 @@ class CrossValidator:
         self.basemodel = copy(model)
         self.datasplit = datasplit
         self.models = []
+        self.id_train = None
+        self.id_test = None
         self.oof = None
         self.pred = None
         self.imps = None
-        self.id_test = None
         self.scores = None
 
-    def run(self, X, y, X_test=None, id_test=None,
+    def run(self, X, y, id_train=None,
+            X_test=None, id_test=None,
             group=None, n_splits=None,
             eval_metrics=None, prediction='predict',
             transforms=None, train_params={},
@@ -150,11 +153,19 @@ class CrossValidator:
         self.imps = np.zeros((X.shape[1], K))
         self.scores = pd.DataFrame()
 
-        if stratified:
-            stratified_y = X.loc[:, stratified]
+        # if stratified:
+        #     stratified_y = X.loc[:, stratified]
+        #     stratified_y = stratified_y >= np.median(stratified_y)
+        # else:
+        #     stratified_y = y
+
+        if isinstance(stratified,
+                      (np.ndarray, np.generic, pd.core.series.Series)):
+            stratified_y = stratified
         else:
             stratified_y = y
 
+        self.id_train = id_train
         self.id_test = id_test
 
         for fold_i, (train_idx, valid_idx) in enumerate(
@@ -236,19 +247,35 @@ class CrossValidator:
         plt.show()
 
     def save_feature_importances(self, columns, path):
-        plt.figure(figsize=(5, -(-len(columns) // 3)))
+        plt.figure(figsize=(12, -(-len(columns) // 9)), dpi=200)
         imps_mean = np.mean(self.imps, axis=1)
-        imps_sd = np.std(self.imps, axis=1, ddof=0)
-        # imps_se = np.std(self.imps, axis=1) / np.sqrt(self.imps.shape[0])
+        # imps_sd = np.std(self.imps, axis=1, ddof=0)
+        imps_se = np.std(self.imps, axis=1) / np.sqrt(self.imps.shape[1])
         # imps_ci = np.std(self.imps, axis=1) / \
         #     np.sqrt(self.imps.shape[0]) * 1.96
         order = np.argsort(imps_mean)
         # order = order[-np.count_nonzero(imps_mean == 0):]
         plt.barh(np.array(columns)[order],
-                 imps_mean[order], xerr=imps_sd[order])
-        plt.xlabel('This error bar is SD')
+                 imps_mean[order], xerr=imps_se[order])
+        plt.xlabel('This error bar is SE')
         # plt.ylabel('')
         plt.savefig(path)
+        plt.close()
+
+        plt.figure(figsize=(12, 6), dpi=200)
+        imps_mean = np.mean(self.imps, axis=1)
+        imps_se = np.std(self.imps, axis=1, ddof=0) / \
+            np.sqrt(self.imps.shape[1])
+        order = np.argsort(imps_mean)
+        columns = np.array(columns)
+        count = 20
+        plt.barh(columns[order][-count:], imps_mean[order]
+                 [-count:], xerr=imps_se[order][-count:])
+        plt.title('Importance of top 20 features')
+        plt.xlabel('Importance (%)')
+        base, ext = os.path.splitext(path)
+        plt.savefig(f'{base}-20{ext}')
+        plt.close()
 
     def save_feature_importances_as_csv(self, columns, path):
         df = pd.DataFrame()
@@ -260,7 +287,8 @@ class CrossValidator:
     def save(self, path):
         objects = [
             self.basemodel, self.datasplit, self.models,
-            self.oof, self.pred, self.imps, self.id_test, self.scores
+            self.id_train, self.id_test,
+            self.oof, self.pred, self.imps, self.scores
         ]
         with open(path, 'wb') as f:
             pickle.dump(objects, f)
@@ -269,7 +297,14 @@ class CrossValidator:
         with open(path, 'rb') as f:
             objects = pickle.load(f)
         self.basemodel, self.datasplit, self.models, \
-            self.oof, self.pred, self.imps, self.id_test, self.scores = objects
+            self.id_train, self.id_test, \
+            self.oof, self.pred, self.imps, self.scores = objects
+
+    def save_oof(self, path, ID='ID', y='y', header=True):
+        df = pd.DataFrame()
+        df[ID] = self.id_train
+        df[y] = self.oof
+        df.to_csv(path, encoding='utf-8', index=False, header=header)
 
     def save_prediction(self, path, ID='ID', y='y', header=True):
         df = pd.DataFrame()
