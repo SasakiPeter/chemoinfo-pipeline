@@ -108,8 +108,6 @@ def train():
     # first layer内の選択したモデル群に対してアベレージングを行う
     # それぞれのモデルのスコアの平均値をとって、cv_summaryに加える
 
-    #
-
     # second layer
     second_layer = settings.SECOND_LAYER
     X, X_test = get_oof_by_layer(first_layer)
@@ -131,19 +129,19 @@ def train():
 
     # visualize的なmodule作った方がよさよう
 
-    import matplotlib.pyplot as plt
-    import numpy as np
-    columns = cv_summary.index.values
+    # import matplotlib.pyplot as plt
+    # import numpy as np
+    # columns = cv_summary.index.values
 
-    for i in range(cv_summary.columns.values.shape[0]//4):
-        plt.figure(figsize=(12, 6))
-        mean = cv_summary.iloc[:, i*4]
-        se = cv_summary.iloc[:, i*4+2]
-        metric, _ = mean.name.split('_')
+    # for i in range(cv_summary.columns.values.shape[0]//4):
+    #     plt.figure(figsize=(12, 6))
+    #     mean = cv_summary.iloc[:, i*4]
+    #     se = cv_summary.iloc[:, i*4+2]
+    #     metric, _ = mean.name.split('_')
 
-        order = np.argsort(mean)
-        plt.barh(np.array(columns)[order],
-                 mean[order], xerr=se[order])
-        plt.xlabel('This error bar is SE')
-        plt.savefig(f'{folder_path}/summary-{metric}.png')
-        plt.close()
+    #     order = np.argsort(mean)
+    #     plt.barh(np.array(columns)[order],
+    #              mean[order], xerr=se[order])
+    #     plt.xlabel('This error bar is SE')
+    #     plt.savefig(f'{folder_path}/summary-{metric}.png')
+    #     plt.close()

@@ -10,9 +10,9 @@ DATA_PATH = {
 # semi target っていうかtarget複数設定して、それぞれの
 # 学習器に応じて、切り替えられるように実装したい
 DATA_FORMAT = {
-    'id': 'rowID',
-    'target': 'Objective Variable_CL(L/hr/kg)_Log',
-    'not_X': ['Objective Variable_CL(L/hr/kg)'],
+    'id': 'CID',
+    'target': 'y',
+    'not_X': ['IsomericSMILES', 'name', 'split'],
 }
 
 CAT_IDXS = []
@@ -26,7 +26,6 @@ N_LAYERS = 2
 FIRST_LAYER = {
     # 'NN_NN-1': {
     #     'PREPROCESS': [
-    #         'CreateBasicity',
     #         'NanToZero',
     #         'RemoveConst',
     #         'Standardize',
@@ -64,14 +63,11 @@ FIRST_LAYER = {
     # },
     'LGBMRegressor_LGB1': {
         'PREPROCESS': [
-            # 'DecomposeBinary',
-            'CreateBasicity',
             'RemoveConst'
         ],
         'CV': {
-            'n_splits': 5,
+            'n_splits': 2,
             'seed': 1,
-            'stratified': 'Lipinski',
         },
         'PARAMS': {
             'objective': 'regression',
@@ -100,6 +96,7 @@ FIRST_LAYER = {
             'min_gain_to_split': 0.0,
 
             'verbose': -1,
+            # 'metric': 'cross_entropy',
             'metric': 'rmse',
             'histogram_pool_size': 1024,
             'n_estimators': 10000,
@@ -110,23 +107,23 @@ FIRST_LAYER = {
         'EVAL_METRICS': [
             'RMSE',
             'R2'
+            # 'AUC',
+            # 'logloss'
         ],
         'PREDICT_FORMAT': 'predict'
     },
     'CatBoostRegressor_CTB1': {
         'PREPROCESS': [
-            # 'DecomposeBinary',
-            'CreateBasicity',
             'RemoveConst'
         ],
         'CV': {
-            'n_splits': 5,
+            'n_splits': 2,
             'seed': 1,
-            'stratified': 'Lipinski',
+            # 'stratified': 'Lipinski',
         },
         'PARAMS': {
             'loss_function': 'RMSE',
-            'eval_metric': 'R2',
+            'eval_metric': 'RMSE',
             'random_seed': 608,
             'learning_rate': 0.1,
 
@@ -166,7 +163,7 @@ SECOND_LAYER = {
     'LinearRegression_STK1': {
         'PREPROCESS': [],
         'CV': {
-            'n_splits': 5,
+            'n_splits': 2,
             'seed': 10
         },
         'PARAMS': {
@@ -176,46 +173,31 @@ SECOND_LAYER = {
 
         },
         'EVAL_METRICS': [
+            # 'AUC',
+            # 'logloss'
             'RMSE',
             'R2'
         ],
         'PREDICT_FORMAT': 'predict'
     },
-    'Ridge_STK2': {
-        'PREPROCESS': [],
-        'CV': {
-            'n_splits': 5,
-            'seed': 10
-        },
-        'PARAMS': {
-            'alpha': 1.0,
-            'random_state': 1
-        },
-        'FIT_PARAMS': {
-
-        },
-        'EVAL_METRICS': [
-            'RMSE',
-            'R2'
-        ],
-        'PREDICT_FORMAT': 'predict'
-    },
-    # 'Blender_BLD2': {
+    # 'Ridge_STK2': {
     #     'PREPROCESS': [],
     #     'CV': {
-    #         'n_splits': 5,
+    #         'n_splits': 2,
     #         'seed': 10
     #     },
     #     'PARAMS': {
-    #         'objective': 'rmse',
+    #         'alpha': 1.0,
     #         'random_state': 1
     #     },
     #     'FIT_PARAMS': {
 
     #     },
     #     'EVAL_METRICS': [
-    #         'RMSE',
-    #         'R2'
+    #         # 'RMSE',
+    #         # 'R2'
+    #         'AUC',
+    #         'logloss'
     #     ],
     #     'PREDICT_FORMAT': 'predict'
     # },

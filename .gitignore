@@ -119,11 +119,12 @@ dmypy.json
 
 catboost_info
 config/settings/*
-data/*
+# data/*
 notebooks/*
 submits/*
 models/*
 reports/*
+*.pkl
 
 !config/settings/sample.py
 !.gitkeep

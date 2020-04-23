@@ -17,6 +17,9 @@ def load_train():
 def load_test():
     path = settings.DATA_PATH['test']
     df = pd.read_csv(path)
-    X = df.drop([settings.DATA_FORMAT['id']], axis=1)
+    not_X = [settings.DATA_FORMAT['id'],
+             settings.DATA_FORMAT['target']] + \
+        settings.DATA_FORMAT['not_X']
+    X = df.drop(not_X, axis=1)
     ID = df[settings.DATA_FORMAT['id']]
     return X, ID
